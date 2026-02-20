@@ -153,6 +153,9 @@ class TransformerLM(nn.Module):
         self.ln_f = nn.LayerNorm(embedding_dim)
         self.lm_head = nn.Linear(embedding_dim, vocab_size)
 
+        self.log_residuals = False
+        self.residuals = None
+
     def enable_attention_logging(self):
         for block in self.blocks:
             block.attn.enable_attention_logging()
@@ -161,12 +164,27 @@ class TransformerLM(nn.Module):
         for block in self.blocks:
             block.attn.disable_attention_logging()
 
+    def enable_residual_logging(self):
+        self.log_residuals = True
+        self.residuals = []
+
+    def disable_residual_logging(self):
+        self.log_residuals = False
+        self.residuals = None
+
     def forward(self, x):
         # get embedding of token
         x = self.tok_emb(x)
+
+        if self.log_residuals:
+            self.residuals.append(x.detach().clone().cpu())
+
         # apply [depth] transformer blocks
         for block in self.blocks:
             x = block(x)
+            if self.log_residuals:
+                self.residuals.append(x.detach().clone().cpu())
+
         # layer norm
         x = self.ln_f(x)
         # decode to vocab size to get logits
