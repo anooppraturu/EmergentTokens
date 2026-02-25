@@ -89,6 +89,7 @@ def get_all_occurences(raw_tokens, model, top_words, word_ids, id_to_char):
         _ = model(truncated_tokens)
 
     layer_datasets = []
+    #currently not considering input layer, but may want to in future so I can embed emergent tokens at input
     for res in model.residuals[1:]:
         ds = []
         for occ in occurences:
