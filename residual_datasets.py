@@ -47,7 +47,7 @@ def get_input_occurences(toks, top_words, word_ids, id_to_char):
     return occurences
 
 
-def pad_residual(res_dat, occ_dat, full_len=7):
+def pad_residual(res_dat, occ_dat, full_len):
     """
     in: full (T, d_res) (where T <= ctx length) residual tensor at fixed layer
         (start_id, end_id, word_id) occurence data
@@ -70,7 +70,7 @@ def pad_residual(res_dat, occ_dat, full_len=7):
     return padded
 
 
-def get_all_occurences(raw_tokens, model, top_words, word_ids, id_to_char):
+def get_all_occurences(raw_tokens, model, top_words, word_ids, id_to_char, full_len):
     """
     in: raw input list of tokens from dataset
         model to evaluate on
@@ -93,7 +93,7 @@ def get_all_occurences(raw_tokens, model, top_words, word_ids, id_to_char):
     for res in model.residuals[1:]:
         ds = []
         for occ in occurences:
-            X = pad_residual(res[0], occ)
+            X = pad_residual(res[0], occ, full_len)
             y = occ[2]
             ds.append((X, y))
 
