@@ -2,6 +2,8 @@ import torch
 import re
 from datasets import load_dataset
 import string
+import numpy as np
+import json
 
 
 class CharDataset(torch.utils.data.Dataset):
@@ -62,8 +64,7 @@ class CharTokenizer:
         return "".join([self.id_to_char[id] for id in ids])
 
 
-
-def construct_and_save_dataset(context_length, path, min_length = 512):
+def download_clean_dataset(min_length=512):
     ds = load_dataset("rahular/simple-wikipedia")
 
     # take all text examples
@@ -74,9 +75,44 @@ def construct_and_save_dataset(context_length, path, min_length = 512):
 
     clean_string = clean_char_text(concat_string)
 
+    return clean_string
+
+
+def construct_and_save_dataset(string, fname, context_length=512):
     tokenizer = CharTokenizer()
-    tokenized_dataset = tokenizer.encode(clean_string)
+    tokenized_dataset = tokenizer.encode(string)
 
     dataset = CharDataset(tokenized_dataset, context_length)
 
-    torch.save(dataset, path)
+    torch.save(dataset, fname)
+
+
+def get_top_words(string, fname, Nwords=256, min_word_length=2):
+    words, cnts = np.unique(string.split(' '), return_counts=True)
+    # sort words by frequency
+    words = words[np.argsort(cnts)[::-1]]
+    cnts = cnts[np.argsort(cnts)[::-1]]
+
+    numwords = 0
+    top_words = {}
+    # get top Nwords words with more than min_word_length letters
+    for i, word in enumerate(words):
+        if len(word) > 2:
+            top_words[word.item()] = cnts[i].item()
+            numwords += 1
+        if numwords >= Nwords:
+            break
+
+    with open(fname, 'w') as file:
+        json.dump(top_words, file, indent=2)
+
+
+def process_data(data_fname, words_fname, context_length=512, min_length=512, Nwords = 256, min_word_length=2):
+    # download and process dataset
+    clean_data_string = download_clean_dataset(min_length)
+
+    # convert to torch CharDataset and save
+    construct_and_save_dataset(clean_data_string, data_fname, context_length)
+
+    # get top emergent tokens and save as dictionary with frequency
+    get_top_words(clean_data_string, words_fname, Nwords, min_word_length)
